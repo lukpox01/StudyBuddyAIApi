@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify
 import google.generativeai as genai
+import requests
 
 app = Flask(__name__)
 
@@ -16,16 +17,35 @@ generation_config = {
 
 # Set up the model
 model = genai.GenerativeModel('gemini-1.5-flash', generation_config=generation_config)
-
+verify_url = 'http://127.0.0.1:6666/auth/verify'
 
 @app.route('/generate_schedule', methods=['POST'])
 def generate_schedule():
 
+
     data = request.json
+    headers = request.headers
+
     subject = data.get('subject', None)
     duration = data.get('num_days', None)
     year_of_study = data.get('year_of_study', None)
     country = data.get('country', None)
+
+    email = headers.get('email', None)
+    token = headers.get('token', None)
+
+    if email is None or token is None:
+        return jsonify({"error": "Provide TOKEN and EMAIL"}), 401
+    data = {
+        "token": token,
+        "email": email
+    }
+    response = requests.post(verify_url, json=data)
+    if response.status_code == 200:
+        if response.text == "false`":
+            return jsonify({"error": "Unauthorized"})
+    else:
+        print(f"Error: {response.status_code}, {response.text}")
 
     if subject is None or isinstance(subject, str) is False:
         return jsonify({"error": "No subject provided"}), 400
@@ -112,12 +132,30 @@ The brief description for each day should give a clear idea of what will be cove
 @app.route('/day_details', methods=['POST'])
 def day_details():
     data = request.json
+    headers = request.headers
+
     day = data.get('day', None)
     subject = data.get('subject', None)
     year_of_study = data.get('year_of_study', None)
     country = data.get('country', None)
     dificulty_level = data.get('dificulty_level', None)
     topic = data.get('topic', None)
+
+    email = headers.get('email', None)
+    token = headers.get('token', None)
+
+    if email is None or token is None:
+        return jsonify({"error": "Provide TOKEN and EMAIL"}), 401
+    data = {
+        "token": token,
+        "email": email
+    }
+    response = requests.post(verify_url, json=data)
+    if response.status_code == 200:
+        if response.text == "false`":
+            return jsonify({"error": "Unauthorized"})
+    else:
+        print(f"Error: {response.status_code}, {response.text}")
 
     if day is None or isinstance(day, int) is False:
         return jsonify({"error": "No day specified"}), 400
